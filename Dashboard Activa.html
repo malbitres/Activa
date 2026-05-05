@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard de Activaciones</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#090c14; --surface:#10141f; --surface2:#161c2d; --surface3:#1c2338;
+  --border:#1f2a45; --border2:#263050;
+  --accent1:#4c8bf5; --accent2:#9b5de5; --accent3:#00c9a7;
+  --accent4:#ff6b6b; --accent5:#f8c043;
+  --text:#dde4f5; --text2:#7d8aaa; --text3:#404d6a;
+  --radius:12px; --radius-sm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 70% 50% at 5% 0%,rgba(76,139,245,0.08) 0%,transparent 55%),
+    radial-gradient(ellipse 50% 40% at 95% 90%,rgba(155,93,229,0.07) 0%,transparent 55%);
+  pointer-events:none;
+}
+.wrap{position:relative;z-index:1;}
+
+/* HEADER */
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 28px;background:rgba(16,20,31,0.92);
+  backdrop-filter:blur(20px);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:200;
+}
+.brand{display:flex;align-items:center;gap:12px;}
+.brand-icon{
+  width:38px;height:38px;
+  background:linear-gradient(135deg,var(--accent1) 0%,var(--accent2) 100%);
+  border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.brand-name{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;letter-spacing:-.5px;}
+.brand-name span{color:var(--accent1);}
+.header-meta{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--accent3);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+/* FILTERS */
+.filters{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:14px 28px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+}
+.flabel{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;white-space:nowrap;}
+select{
+  background:var(--surface2);border:1px solid var(--border2);color:var(--text);
+  padding:8px 32px 8px 12px;border-radius:var(--radius-sm);
+  font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none;
+  transition:border-color .2s,box-shadow .2s;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237d8aaa' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;min-width:160px;
+}
+select:focus{border-color:var(--accent1);box-shadow:0 0 0 3px rgba(76,139,245,0.15);}
+select option{background:#161c2d;}
+.fdivider{width:1px;height:24px;background:var(--border);margin:0 2px;}
+.badge-count{margin-left:auto;display:flex;gap:12px;}
+.bc{font-size:12px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);padding:5px 12px;border-radius:20px;}
+.bc strong{color:var(--accent1);font-weight:700;}
+.btn-reset{
+  background:none;border:1px solid var(--border);color:var(--text2);
+  padding:7px 14px;border-radius:var(--radius-sm);font-size:12px;
+  cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;
+}
+.btn-reset:hover{border-color:var(--accent4);color:var(--accent4);}
+
+/* TABS */
+.tabs{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;display:flex;}
+.tab{
+  padding:14px 24px;background:none;border:none;border-bottom:2px solid transparent;
+  color:var(--text2);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;
+  cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px;
+}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--accent1);border-bottom-color:var(--accent1);}
+.tab-dot{width:6px;height:6px;border-radius:50%;background:var(--accent1);opacity:0;}
+.tab.active .tab-dot{opacity:1;}
+
+/* MAIN */
+main{padding:24px 28px;}
+.panel{display:none;}
+.panel.active{display:block;}
+
+/* SECTION LABEL */
+.slabel{
+  font-size:11px;font-weight:700;color:var(--text3);
+  text-transform:uppercase;letter-spacing:1.5px;
+  margin-bottom:14px;display:flex;align-items:center;gap:10px;
+}
+.slabel::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* KPI CARDS */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:24px;}
+.kpi{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:18px 18px 16px;position:relative;overflow:hidden;
+  transition:transform .2s,border-color .2s;
+}
+.kpi:hover{transform:translateY(-2px);border-color:var(--border2);}
+.kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.kpi.c1::after{background:linear-gradient(90deg,var(--accent1),transparent);}
+.kpi.c2::after{background:linear-gradient(90deg,var(--accent2),transparent);}
+.kpi.c3::after{background:linear-gradient(90deg,var(--accent3),transparent);}
+.kpi.c4::after{background:linear-gradient(90deg,var(--accent5),transparent);}
+.kpi.c5::after{background:linear-gradient(90deg,var(--accent4),transparent);}
+.kpi.c6::after{background:linear-gradient(90deg,#67e8f9,transparent);}
+.kpi-ico{font-size:20px;margin-bottom:10px;display:block;}
+.kpi-lbl{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.9px;margin-bottom:5px;}
+.kpi-val{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;line-height:1;}
+.kpi-sub{font-size:11px;color:var(--text3);margin-top:5px;}
+
+/* CHARTS */
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;}
+.chart-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+.chart-ttl{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.chart-ttl::before{content:'';width:3px;height:14px;background:var(--accent1);border-radius:2px;}
+.cw{position:relative;height:195px;}
+
+/* TABLE */
+.tbox{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:24px;overflow:hidden;}
+.thead2{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);}
+.tttl{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.tttl::before{content:'';width:3px;height:14px;background:var(--accent2);border-radius:2px;}
+.tsearch{
+  background:var(--surface2);border:1px solid var(--border2);color:var(--text);
+  padding:7px 12px;border-radius:var(--radius-sm);font-size:12px;
+  font-family:'DM Sans',sans-serif;outline:none;width:180px;
+}
+.tsearch::placeholder{color:var(--text3);}
+.tsearch:focus{border-color:var(--accent1);}
+.tc{overflow-x:auto;max-height:360px;overflow-y:auto;}
+table{width:100%;border-collapse:collapse;font-size:12.5px;}
+thead{position:sticky;top:0;z-index:10;}
+thead th{
+  background:var(--surface2);padding:10px 14px;text-align:left;
+  font-weight:700;font-size:10px;color:var(--text2);
+  text-transform:uppercase;letter-spacing:.7px;
+  border-bottom:1px solid var(--border);white-space:nowrap;
+  cursor:pointer;user-select:none;
+}
+thead th:hover{color:var(--accent1);}
+tbody tr{border-bottom:1px solid rgba(31,42,69,0.5);transition:background .15s;}
+tbody tr:hover{background:rgba(76,139,245,0.04);}
+tbody td{padding:9px 14px;color:var(--text2);white-space:nowrap;}
+tbody td:first-child{color:var(--text);font-weight:500;}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.5px;}
+.b-alta{background:rgba(0,201,167,0.12);color:var(--accent3);}
+.b-media{background:rgba(248,192,67,0.12);color:var(--accent5);}
+.b-baja{background:rgba(255,107,107,0.12);color:var(--accent4);}
+
+/* PAGINATION */
+.pag{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);}
+.pbtns{display:flex;gap:4px;}
+.pb{
+  background:var(--surface2);border:1px solid var(--border);color:var(--text2);
+  width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:12px;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .15s;font-family:'DM Sans',sans-serif;
+}
+.pb:hover,.pb.on{background:var(--accent1);border-color:var(--accent1);color:#fff;}
+
+/* STORE SUMMARY CARDS */
+.sum-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:16px;
+  margin-bottom:24px;
+}
+.sum-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;
+  transition:transform .2s,border-color .2s;
+}
+.sum-card:hover{transform:translateY(-2px);border-color:var(--border2);}
+.sum-card-head{
+  display:flex;align-items:center;gap:12px;
+  padding:16px 18px 12px;border-bottom:1px solid var(--border);
+}
+.sum-store-icon{
+  width:36px;height:36px;border-radius:9px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:17px;
+}
+.si-0{background:rgba(76,139,245,0.15);}
+.si-1{background:rgba(155,93,229,0.15);}
+.si-2{background:rgba(0,201,167,0.15);}
+.si-3{background:rgba(248,192,67,0.15);}
+.sum-store-name{
+  font-family:'Syne',sans-serif;font-size:13px;font-weight:700;
+  line-height:1.2;
+}
+.sum-store-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.sum-body{padding:14px 18px;display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.sum-stat{}
+.sum-stat-val{
+  font-family:'Syne',sans-serif;font-size:20px;font-weight:800;
+  color:var(--text);line-height:1;
+}
+.sum-stat-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-top:3px;}
+.sum-bar-wrap{padding:0 18px 16px;}
+.sum-bar-lbl{display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:5px;}
+.sum-bar-bg{background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;}
+.sum-bar-fill{height:100%;border-radius:4px;transition:width .6s ease;}
+.fill-0{background:linear-gradient(90deg,var(--accent1),#7ab4ff);}
+.fill-1{background:linear-gradient(90deg,var(--accent2),#c48dff);}
+.fill-2{background:linear-gradient(90deg,var(--accent3),#5ffde0);}
+.fill-3{background:linear-gradient(90deg,var(--accent5),#ffd980);}
+.sum-afl{
+  display:flex;gap:6px;padding:0 18px 16px;flex-wrap:wrap;
+}
+.afl-chip{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;
+}
+.afl-chip.alta{background:rgba(0,201,167,0.12);color:var(--accent3);}
+.afl-chip.media{background:rgba(248,192,67,0.12);color:var(--accent5);}
+.afl-chip.baja{background:rgba(255,107,107,0.12);color:var(--accent4);}
+.no-data{
+  grid-column:1/-1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:40px;color:var(--text3);gap:8px;font-size:13px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--surface);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+/* Responsive */
+@media(max-width:768px){
+  header,.filters,.tabs{padding-left:16px;padding-right:16px;}
+  main{padding:16px;}
+  .charts{grid-template-columns:1fr;}
+  .kpis{grid-template-columns:repeat(2,1fr);}
+  .badge-count{display:none;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="brand">
+    <div class="brand-icon">📊</div>
+    <div class="brand-name">ACTIVA<span>DASH</span></div>
+  </div>
+  <div class="header-meta">
+    <div class="pulse"></div>
+    Datos cargados
+  </div>
+</header>
+
+<div class="filters">
+  <span class="flabel">📅 Fecha</span>
+  <select id="fFecha" onchange="applyFilters()">
+    <option value="">Todas las fechas</option>
+  </select>
+  <div class="fdivider"></div>
+  <span class="flabel">🏪 Tienda</span>
+  <select id="fTienda" onchange="applyFilters()">
+    <option value="">Todas las tiendas</option>
+  </select>
+  <div class="fdivider"></div>
+  <span class="flabel">👤 Afluencia</span>
+  <select id="fAfluencia" onchange="applyFilters()">
+    <option value="">Todas</option>
+    <option value="ALTA">Alta</option>
+    <option value="MEDIA">Media</option>
+    <option value="BAJA">Baja</option>
+  </select>
+  <button class="btn-reset" onclick="resetFilters()">↺ Limpiar</button>
+  <div class="badge-count">
+    <div class="bc">Sampling: <strong id="countS">—</strong></div>
+    <div class="bc">Ruleta: <strong id="countR">—</strong></div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" id="tab-sampling" onclick="switchTab('sampling')">
+    <div class="tab-dot"></div>🧪 Sampling
+  </button>
+  <button class="tab" id="tab-ruleta" onclick="switchTab('ruleta')">
+    <div class="tab-dot"></div>🎯 Ruleta
+  </button>
+</div>
+
+<main>
+
+<!-- ===== SAMPLING ===== -->
+<div class="panel active" id="panel-sampling">
+
+  <div class="slabel">Indicadores Clave · Sampling</div>
+  <div class="kpis" id="kpiS"></div>
+
+  <div class="charts">
+    <div class="chart-box">
+      <div class="chart-ttl">Sampling por Tienda</div>
+      <div class="cw"><canvas id="cST"></canvas></div>
+    </div>
+    <div class="chart-box">
+      <div class="chart-ttl">Afluencia por Fecha</div>
+      <div class="cw"><canvas id="cSF"></canvas></div>
+    </div>
+  </div>
+
+  <div class="tbox">
+    <div class="thead2">
+      <div class="tttl">Registros de Sampling</div>
+      <input class="tsearch" type="text" placeholder="🔍 Buscar..." id="srchS" oninput="filterTbl('S')">
+    </div>
+    <div class="tc">
+      <table>
+        <thead><tr>
+          <th onclick="srt('S','FECHA')">Fecha ↕</th>
+          <th onclick="srt('S','TIENDA')">Tienda ↕</th>
+          <th onclick="srt('S','AFLUENCIA TXT')">Afluencia ↕</th>
+          <th onclick="srt('S','EDAD SHOPPER')">Edad Shopper ↕</th>
+          <th onclick="srt('S','FACTOR DIFICULTAD VENTAS')">Factor Dificultad ↕</th>
+          <th onclick="srt('S','SAMPLING')">Sampling ↕</th>
+          <th onclick="srt('S','PERSONAS ABORDADAS')">Pers. Abordadas ↕</th>
+        </tr></thead>
+        <tbody id="tbS"></tbody>
+      </table>
+    </div>
+    <div class="pag">
+      <span id="piS">—</span>
+      <div class="pbtns" id="pbS"></div>
+    </div>
+  </div>
+
+  <div class="slabel">Resumen por Tienda · Sampling</div>
+  <div class="sum-grid" id="sumS"></div>
+
+</div>
+
+<!-- ===== RULETA ===== -->
+<div class="panel" id="panel-ruleta">
+
+  <div class="slabel">Indicadores Clave · Ruleta</div>
+  <div class="kpis" id="kpiR"></div>
+
+  <div class="charts">
+    <div class="chart-box">
+      <div class="chart-ttl">Ventas por Tienda</div>
+      <div class="cw"><canvas id="cRT"></canvas></div>
+    </div>
+    <div class="chart-box">
+      <div class="chart-ttl">Participantes vs Canjes por Fecha</div>
+      <div class="cw"><canvas id="cRF"></canvas></div>
+    </div>
+  </div>
+
+  <div class="tbox">
+    <div class="thead2">
+      <div class="tttl">Registros de Ruleta</div>
+      <input class="tsearch" type="text" placeholder="🔍 Buscar..." id="srchR" oninput="filterTbl('R')">
+    </div>
+    <div class="tc">
+      <table>
+        <thead><tr>
+          <th onclick="srt('R','FECHA')">Fecha ↕</th>
+          <th onclick="srt('R','TIENDA')">Tienda ↕</th>
+          <th onclick="srt('R','AFLUENCIA TXT')">Afluencia ↕</th>
+          <th onclick="srt('R','EDAD SHOPPER')">Edad Shopper ↕</th>
+          <th onclick="srt('R','FACTOR DIFICULTAD VENTAS')">Factor Dificultad ↕</th>
+          <th onclick="srt('R','CANTIDAD VENDIDA')">Cant. Vendida ↕</th>
+          <th onclick="srt('R','PERSONAS ABORDADAS')">Pers. Abordadas ↕</th>
+          <th onclick="srt('R','PARTICIPANTES EN RULETA')">Participantes ↕</th>
+          <th onclick="srt('R','CANJE TAPERS')">Tapers ↕</th>
+          <th onclick="srt('R','CANJE PANES')">Panes ↕</th>
+        </tr></thead>
+        <tbody id="tbR"></tbody>
+      </table>
+    </div>
+    <div class="pag">
+      <span id="piR">—</span>
+      <div class="pbtns" id="pbR"></div>
+    </div>
+  </div>
+
+  <div class="slabel">Resumen por Tienda · Ruleta</div>
+  <div class="sum-grid" id="sumR"></div>
+
+</div>
+</main>
+</div>
+
+<script>
+const RAW_S = [{"FECHA": "2026-04-23", "TIENDA": "MERCADO DUEÑAS", "DNI": 43098942, "FOTO INGRESO": null, "FOTO SALIDA": null, "AFLUENCIA": 4, "EDAD SHOPPER": "Entre 36 y 50 años", "FACTOR DIFICULTAD VENTAS": "Cliente (No interesado, prisa, etc.)", "SAMPLING": 800, "PERSONAS ABORDADAS": 200, "FOTO CON SAMPLING": "https://drive.google.com/open?id=1HYxjfMQ2Zq3oaA_1yqG1XcORz-JdORt7", "AFLUENCIA TXT": "ALTA"}, {"FECHA": "2026-04-23", "TIENDA": "MERCADO SANTA ROSA", "DNI": 71834793, "FOTO INGRESO": "https://drive.google.com/open?id=1mx5SnqCg3epsiS0OK8aNrbuxat2w03L9", "FOTO SALIDA": "https://drive.google.com/open?id=14zzysd-y2h4qR002CZh_ZIsmRZ-3BWGo", "AFLUENCIA": 3, "EDAD SHOPPER": "Entre 26 y 35 años", "FACTOR DIFICULTAD VENTAS": "Cliente (No interesado, prisa, etc.)", "SAMPLING": 8, "PERSONAS ABORDADAS": 50, "FOTO CON SAMPLING": "https://drive.google.com/open?id=1J2PiohMkt7clD7ER39R_bcNQWqd0zAwi, https://drive.google.com/open?id=1i9xYDsQMEeZtCFnK8VwdZ_SsscmvTdUr, https://drive.google.com/open?id=14BpxiNSWOP_aH5hRZThaUb5rFEDgxPvZ", "AFLUENCIA TXT": "MEDIA"}, {"FECHA": "2026-04-23", "TIENDA": "MERCADO DUEÑAS", "DNI": 77820932, "FOTO INGRESO": "https://drive.google.com/open?id=1KA0PiFWdhEvA3nL-ufnc6kbPoc7GKlMF", "FOTO SALIDA": "https://drive.google.com/open?id=1-eNeS2wralEnQzaq69x6ARqQW58pRTdh", "AFLUENCIA": 2, "EDAD SHOPPER": "Entre 26 y 35 años", "FACTOR DIFICULTAD VENTAS": "Precio (Clientes lo percibían muy alto)", "SAMPLING": 150, "PERSONAS ABORDADAS": 90, "FOTO CON SAMPLING": "https://drive.google.com/open?id=1pODPO68ju0aFJUQOluM6kKC2MDpU_XlT", "AFLUENCIA TXT": "BAJA"}, {"FECHA": "2026-04-23", "TIENDA": "MERCADO CIUDAD DE DIOS", "DNI": 61434600, "FOTO INGRESO": "https://drive.google.com/open?id=1Zv57R97knEo3NKCrX2YePsIuKzdZRezi", "FOTO SALIDA": "https://drive.google.com/open?id=1VazZoJ8dGp3SxWEawJ_pSFrY8lLhSdTk", "AFLUENCIA": 5, "EDAD SHOPPER": "Entre 26 y 35 años", "FACTOR DIFICULTAD VENTAS": "Cliente (No interesado, prisa, etc.)", "SAMPLING": 704, "PERSONAS ABORDADAS": 704, "FOTO CON SAMPLING": "https://drive.google.com/open?id=1AW8EoCYKe5N3dACRgGNgkxZRbiwAm0RG", "AFLUENCIA TXT": "ALTA"}, {"FECHA": "2026-04-24", "TIENDA": "MERCADO DUEÑAS", "DNI": 43098942, "FOTO INGRESO": "https://drive.google.com/open?id=1El5i9Ewth7J8KlHecxVO5J7PBvzNdlOt", "FOTO SALIDA": "https://drive.google.com/open?id=17iSV3Xx6hQyDl2GZRwX4f7nmk0qEBtQT", "AFLUENCIA": 4, "EDAD SHOPPER": "Entre 36 y 50 años", "FACTOR DIFICULTAD VENTAS": "Cliente (No interesado, prisa, etc.)", "SAMPLING": 600, "PERSONAS ABORDADAS": 600, "FOTO CON SAMPLING": "https://drive.google.com/open?id=1xZzHLw8XR-K7yDF8ovE1lf_VBW8-sHX9", "AFLUENCIA TXT": "ALTA"}, {"FECHA": "2026-04-24", "TIENDA": "MERCADO SANTA ROSA", "DNI": 71834793, "FOTO INGRESO": "https://drive.google.com/open?id=19sMJml1YmGiUXRtpoY8biKkXo4dciMiT", "FOTO SALIDA": "https://drive.google.com/open?id=1aD_YczaDJdwqvhV7pyNKVr2h-pT-EJXU", "AFLUENCIA": 3, "EDAD SHOPPER": "Entre 26 y 35 años", "FACTOR DIFICULTAD VENTAS": "Cliente (No interesado, prisa, etc.)", "SAMPLING": 10, "PERSONAS ABORDADAS": 50, "FOTO CON SAMPLING": "https://drive.google.com/open?id=1TTpA8aIvmd1emvTn5v_CW3LSqeknalnJ, https://drive.google.com/open?id=1xFjOCgxv-HhkeN-e5tlVorv1k2EIdDFi, https://drive.google.com/open?id=1IefS4ZSipYp1Sx0kY4Sdy9KW6yx7MO6t, https://drive.google.com/open?id=1U65mIPcp8UXDAzHKT3FsdXFYCVlw87nu, https://drive.google.com/open?id=1KyfwH6KkHms-JAGVOHlSXfq__UurHJGd, https://drive.google.com/open?id=1F10EJF93BtSEQBwxHuZwgR4BNxAi2M8o, https://drive.google.com/open?id=1bcslWdKzVzEHbbBsb2lwkDvvE3k0d7Xo, https://drive.google.com/open?id=1-jRBfYEvfi_KPWtk6jVnT_Pqyql23JCg, https://drive.google.com/open?id=16h9lNoIM7NCHTsGyfbq7ok0XSi6qMVsj, https://drive.google.com/open?id=1_nOVxzHSnZsvUSDbGfviE6i1zhZY45ag", "AFLUENCIA TXT": "MEDIA"}, {"FECHA": "2026-04-24", "TIENDA": "MERCADO CIUDAD DE DIOS", "DNI": 61434600, "FOTO INGRESO": "https://drive.google.com/open?id=1nPsOjKCANDj-D_0It9KZ58DWA1wT6x6g", "FOTO SALIDA": "https://drive.google.com/open?id=1qS4ci4VqX602WuRARuywJ7WLPSbQf3nR", "AFLUENCIA": 5, "EDAD SHOPPER": "Entre 26 y 35 años", "FACTOR DIFICULTAD VENTAS": "Cliente (No interesado, prisa, etc.)", "SAMPLING": 704, "PERSONAS ABORDADAS": 704, "FOTO CON SAMPLING": "https://drive.google.com/open?id=1m5EBFf5if1VQbrNWGHN0pqvaE7cFW1TS", "AFLUENCIA TXT": "ALTA"}, {"FECHA": "2026-04-24", "TIENDA": "MERCADO SANTA ROSA", "DNI": 43434405, "FOTO INGRESO": "https://drive.google.com/open?id=1KVMUUpj85RwUnCXYCfVKBD8GrWjTyZR2", "FOTO SALIDA": "https://drive.google.com/open?id=1VApN9coPSCfvwcgUS9jO1KU6NIm2VSCI", "AFLUENCIA": 5, "EDAD SHOPPER": "Más de 50 años", "FACTOR DIFICULTAD VENTAS": "Stock (Falta de producto o exhibición pobre)", "SAMPLING": 20, "PERSONAS ABORDADAS": 100, "FOTO CON SAMPLING": "https://drive.google.com/open?id=1uZLa52JHOQNI2UgxE8ihK046LBpi4Fl_, https://drive.google.com/open?id=1pg95u_ElMaYy3mGpwVBsi0xDE_3RVB87, https://drive.google.com/open?id=1Y0UdYw4bJqblGK1cKIJ4cAYzabExNGMi", "AFLUENCIA TXT": "ALTA"}, {"FECHA": "2026-04-24", "TIENDA": "MERCADO DUEÑAS", "DNI": 77820932, "FOTO INGRESO": "https://drive.google.com/open?id=1Yf5qMUhteT2Ybpx9OI0XkBT3ViBHir8w", "FOTO SALIDA": "https://drive.google.com/open?id=1CD8yN9-6Bnwy196zFaV3Bh6xO-R_779H", "AFLUENCIA": 3, "EDAD SHOPPER": "Entre 18 y 25 años", "FACTOR DIFICULTAD VENTAS": "Precio (Clientes lo percibían muy alto)", "SAMPLING": 50, "PERSONAS ABORDADAS": 70, "FOTO CON SAMPLING": "https://drive.google.com/open?id=13X7xnZchL9TE1-dgzin3T29h97L785VK", "AFLUENCIA TXT": "MEDIA"}, {"FECHA": "2026-04-25", "TIENDA": "MERCADO SANTA ROSA", "DNI": 43434405, "FOTO INGRESO": "https://drive.google.com/open?id=1C_mRKg7HUPOuB_Mfd06-2jsMuA64kp1P", "FOTO SALIDA": "https://drive.google.com/open?id=1K2UXCdKgXqcHMxyv-EXW-Znqj4iiKlsm", "AFLUENCIA": 5, "EDAD SHOPPER": "Entre 36 y 50 años", "FACTOR DIFICULTAD VENTAS": "Cliente (No interesado, prisa, etc.)", "SAMPLING": 29, "PERSONAS ABORDADAS": 100, "FOTO CON SAMPLING": "https://drive.google.com/open?id=10J2bNsNYjcwu1uygPTFc1eqbEd8fj9NJ, https://drive.google.com/open?id=1ErPKm3FFe9I_7DlrCWJ_NIly99MPy7rR, https://drive.google.com/open?id=1utFNvcUBn091wgmiHX3wrHvqRIn4-dx3, https://drive.google.com/open?id=1dlU8IspOBFyCoLv-nRM1xwiXDGUrqd76, https://drive.google.com/open?id=1C-ulyAVRQy8EZg3Lwvt5Gd1f3ZV4G1nt", "AFLUENCIA TXT": "ALTA"}, {"FECHA": "2026-04-25", "TIENDA": "MERCADO SANTA ROSA", "DNI": 71834793, "FOTO INGRESO": "https://drive.google.com/open?id=1Xf_s1AluiBtCH_0UASi23K6T1zkKOujX", "FOTO SALIDA": "https://drive.google.com/open?id=1gl0HuAmaRtlwbrmrWRQga6tr4iZFWTob", "AFLUENCIA": 4, "EDAD SHOPPER": "Entre 36 y 50 años", "FACTOR DIFICULTAD VENTAS": "Cliente (No interesado, prisa, etc.)", "SAMPLING": 23, "PERSONAS ABORDADAS": 60, "FOTO CON SAMPLING": "https://drive.google.com/open?id=1C0mnfkPKm7G9g0Ry5-BhmBOiDhfshFmK, https://drive.google.com/open?id=1tcYlODQfimgtCcpAvTQdTCguOQn1iXNc, https://drive.google.com/open?id=1PZemDvdZkcgbu37n_ED-0a2XnWc-gGfV, https://drive.google.com/open?id=1GV3LM82J5BThWvKf_Xe34KqTrUh9lwOy, https://drive.google.com/open?id=1gEvS5RQDqXXimuv995ON0fPCWLkYo6LF, https://drive.google.com/open?id=1O4zh8ykQkh5-rfybPY-zZknjE0aBTajQ, https://drive.google.com/open?id=1q8LkGzTm4G-y3g9eWNu8TZajaVRpbejX, https://drive.google.com/open?id=1c9LMV7bif7Sg5voJ2U6mKkZDPswR-hXz, https://drive.google.com/open?id=1vb1ZW71IBGsDTHWD7j9h0gJM0BCHi8Xo, https://drive.google.com/open?id=14k3so5ezqXn0Z9R4h2FvtbOTTcf-JUmq", "AFLUENCIA TXT": "ALTA"}];
+const RAW_R = [{"FECHA": "2026-04-23", "TIENDA": "MERCADO DUEÑAS", "DNI": 43098942, "FOTO INGRESO": null, "FOTO SALIDA": null, "AFLUENCIA": 4, "EDAD SHOPPER": "Entre 36 y 50 años", "FACTOR DIFICULTAD VENTAS": "Cliente (No interesado, prisa, etc.)", "CANTIDAD VENDIDA": 10, "PERSONAS ABORDADAS": 150, "PARTICIPANTES EN RULETA": 10, "CANJE TAPERS": 10, "CANJE PANES": 3, "FOTO CON PREMIO": null, "AFLUENCIA TXT": "ALTA"}, {"FECHA": "2026-04-23", "TIENDA": "MERCADO SANTA ROSA", "DNI": 71834793, "FOTO INGRESO": "https://drive.google.com/open?id=1052-1ZpZ5kW5PN2oVXqQfmBtVw1kMain", "FOTO SALIDA": "https://drive.google.com/open?id=1wZ1uAvgE1d5wRwCe6FtHw-8MGJ2iMpRG", "AFLUENCIA": 3, "EDAD SHOPPER": "Entre 26 y 35 años", "FACTOR DIFICULTAD VENTAS": "Cliente (No interesado, prisa, etc.)", "CANTIDAD VENDIDA": 20, "PERSONAS ABORDADAS": 50, "PARTICIPANTES EN RULETA": 20, "CANJE TAPERS": 8, "CANJE PANES": 100, "FOTO CON PREMIO": "https://drive.google.com/open?id=1Ez10goxPW0ktOrNBsZGoF0JyGyg7ZCln, https://drive.google.com/open?id=1mdcZQiDEVVktq6DAqmTCnDPO2_0utoV-, https://drive.google.com/open?id=1cE8xlhCkHL0E7AkAzDUwRemzchjPtJyo", "AFLUENCIA TXT": "MEDIA"}, {"FECHA": "2026-04-23", "TIENDA": "MERCADO DUEÑAS", "DNI": 77820932, "FOTO INGRESO": "https://drive.google.com/open?id=1BmHjGq0gtM7Jy8G-PCy1f5O-UBVRpU3T", "FOTO SALIDA": "https://drive.google.com/open?id=1pQ_oNoN_NwpmNRxLFXdSD1l9sgYWZMUf", "AFLUENCIA": 2, "EDAD SHOPPER": "Entre 26 y 35 años", "FACTOR DIFICULTAD VENTAS": "Precio (Clientes lo percibían muy alto)", "CANTIDAD VENDIDA": 9, "PERSONAS ABORDADAS": 50, "PARTICIPANTES EN RULETA": 20, "CANJE TAPERS": 9, "CANJE PANES": 20, "FOTO CON PREMIO": "https://drive.google.com/open?id=1XZnArYNCj3GwmNueB3vGA5PE2GtTMD42", "AFLUENCIA TXT": "BAJA"}, {"FECHA": "2026-04-23", "TIENDA": "MERCADO SANTA ROSA", "DNI": 43434405, "FOTO INGRESO": "https://drive.google.com/open?id=1bR_uLRXy4zIFXvyGdUr73x5pv_Hzqh2L", "FOTO SALIDA": "https://drive.google.com/open?id=15xLsQkeuyraJoMPKkTRsfG_QsexGLGHv", "AFLUENCIA": 3, "EDAD SHOPPER": "Entre 36 y 50 años", "FACTOR DIFICULTAD VENTAS": "Precio (Clientes lo percibían muy alto)", "CANTIDAD VENDIDA": 20, "PERSONAS ABORDADAS": 76, "PARTICIPANTES EN RULETA": 15, "CANJE TAPERS": 7, "CANJE PANES": 65, "FOTO CON PREMIO": "https://drive.google.com/open?id=1Awpc22ClayWTsoK1lu-6T3NVMuhRnNli, https://drive.google.com/open?id=1HLKR0AjA8rTS4cxbD0tyaOtVpLnzkbuG, https://drive.google.com/open?id=19_9NN58uyy89wzw09MvZzDl3jKeWgRpA", "AFLUENCIA TXT": "MEDIA"}, {"FECHA": "2026-04-24", "TIENDA": "MERCADO DUEÑAS", "DNI": 43098942, "FOTO INGRESO": "https://drive.google.com/open?id=12JL7kxtHcmsEHf67A07p1Z2nJ96Mlz6m", "FOTO SALIDA": "https://drive.google.com/open?id=1imH6n-Fm6EAt1d2ojkQ4NdEI3KHQZ6vQ", "AFLUENCIA": 4, "EDAD SHOPPER": "Entre 26 y 35 años", "FACTOR DIFICULTAD VENTAS": "Cliente (No interesado, prisa, etc.)", "CANTIDAD VENDIDA": 25, "PERSONAS ABORDADAS": 400, "PARTICIPANTES EN RULETA": 300, "CANJE TAPERS": 25, "CANJE PANES": 10, "FOTO CON PREMIO": "https://drive.google.com/open?id=1RHlu1Yf5LMkRTyvnMXPrRDX_WLYFU_Hi", "AFLUENCIA TXT": "ALTA"}, {"FECHA": "2026-04-24", "TIENDA": "MERCADO SANTA ROSA", "DNI": 71834793, "FOTO INGRESO": "https://drive.google.com/open?id=1XTZe593789if86lC1N7G7sh8LY_WiCfU", "FOTO SALIDA": "https://drive.google.com/open?id=1JtvPReNy0EWOqEPcEFplZMVAol7jqjaP", "AFLUENCIA": 4, "EDAD SHOPPER": "Entre 36 y 50 años", "FACTOR DIFICULTAD VENTAS": "Cliente (No interesado, prisa, etc.)", "CANTIDAD VENDIDA": 25, "PERSONAS ABORDADAS": 50, "PARTICIPANTES EN RULETA": 25, "CANJE TAPERS": 10, "CANJE PANES": 100, "FOTO CON PREMIO": "https://drive.google.com/open?id=1ys1idvLYNhD0yGt0gCNEdJwnxm_vfDRU, https://drive.google.com/open?id=1dyeeA386GQfvR1siZhrMmjxUMptjfR4J, https://drive.google.com/open?id=1wxIJvon9gn4E4hvZyCyWKYu8Kh2-oIwq, https://drive.google.com/open?id=1UGOifvbMLf0ToJm9qdvZLSPjdj18bP5h, https://drive.google.com/open?id=1nFFCcc7Lf4FoCY9iG-JhHxGoZY8JE3NE, https://drive.google.com/open?id=1LUdor7ATpjg9in7Zyv6bIZDzVD0Kc60e, https://drive.google.com/open?id=1yEPKoxioNLetJ8irHbPAg3St-bTPR2eD, https://drive.google.com/open?id=1U4rTIW68vF-PUpj1rgbog0WPrsMsWwHp, https://drive.google.com/open?id=1eMkHzEBT5LadgTrtTiQoIH_e_PLkq6UH, https://drive.google.com/open?id=1YGason5JqRJ3FUW0DRfmlJw09Ex8HmR7", "AFLUENCIA TXT": "ALTA"}, {"FECHA": "2026-04-24", "TIENDA": "MERCADO CIUDAD DE DIOS", "DNI": 61434600, "FOTO INGRESO": "https://drive.google.com/open?id=1NQzQ6zgSQoyEf2d-uHMSsOhnasg7KIwY", "FOTO SALIDA": "https://drive.google.com/open?id=1KuxgTQJKUGDNAylneXHQ2J25hHyN93To", "AFLUENCIA": 4, "EDAD SHOPPER": "Entre 18 y 25 años", "FACTOR DIFICULTAD VENTAS": "Cliente (No interesado, prisa, etc.)", "CANTIDAD VENDIDA": 40, "PERSONAS ABORDADAS": 40, "PARTICIPANTES EN RULETA": 300, "CANJE TAPERS": 25, "CANJE PANES": 704, "FOTO CON PREMIO": "https://drive.google.com/open?id=1JsKbSpL_-10hAsKv8-KmM4TZMVPWv4V0", "AFLUENCIA TXT": "ALTA"}, {"FECHA": "2026-04-24", "TIENDA": "MERCADO SANTA ROSA", "DNI": 43434405, "FOTO INGRESO": "https://drive.google.com/open?id=1tpSPJdg59-V01sBcHwKWbtDnN7wNHYiu", "FOTO SALIDA": "https://drive.google.com/open?id=1SWjK6Dxcm-9v4uMBlF9aGqVxAemTtUEX", "AFLUENCIA": 5, "EDAD SHOPPER": "Más de 50 años", "FACTOR DIFICULTAD VENTAS": "Stock (Falta de producto o exhibición pobre)", "CANTIDAD VENDIDA": 20, "PERSONAS ABORDADAS": 100, "PARTICIPANTES EN RULETA": 20, "CANJE TAPERS": 13, "CANJE PANES": 65, "FOTO CON PREMIO": "https://drive.google.com/open?id=18eRYswGeFNE7_v981JqH1IUByslW_ZVY, https://drive.google.com/open?id=1Xl2F67lz1_DtrCvR_euGdUlSIF-H3eHN, https://drive.google.com/open?id=1vlKQyY6k7fGtu0h6Fw4sh0jX29L_DFbG", "AFLUENCIA TXT": "ALTA"}, {"FECHA": "2026-04-24", "TIENDA": "MERCADO DUEÑAS", "DNI": 77820932, "FOTO INGRESO": "https://drive.google.com/open?id=1_Ax9tLhXNQl_9bZMISplk3Yx9AzLuddF", "FOTO SALIDA": "https://drive.google.com/open?id=1ffAAkrKduL9H9pSxI7WGJMImmq4p6lVF", "AFLUENCIA": 4, "EDAD SHOPPER": "Entre 26 y 35 años", "FACTOR DIFICULTAD VENTAS": "Precio (Clientes lo percibían muy alto)", "CANTIDAD VENDIDA": 20, "PERSONAS ABORDADAS": 27, "PARTICIPANTES EN RULETA": 19, "CANJE TAPERS": 12, "CANJE PANES": 70, "FOTO CON PREMIO": "https://drive.google.com/open?id=1F-maWIXwQe0lw3663C4dWDl1h4DyQZqz", "AFLUENCIA TXT": "ALTA"}, {"FECHA": "2026-04-25", "TIENDA": "MERCADO SANTA ROSA", "DNI": 43434405, "FOTO INGRESO": "https://drive.google.com/open?id=1pJouc-z4ZwUXpBhjb6XmSi0n0Z9HA931", "FOTO SALIDA": "https://drive.google.com/open?id=1X8YyEvL2-jinbh13eQnjayEBEiORI29C", "AFLUENCIA": 5, "EDAD SHOPPER": "Entre 36 y 50 años", "FACTOR DIFICULTAD VENTAS": "Cliente (No interesado, prisa, etc.)", "CANTIDAD VENDIDA": 29, "PERSONAS ABORDADAS": 100, "PARTICIPANTES EN RULETA": 29, "CANJE TAPERS": 29, "CANJE PANES": 0, "FOTO CON PREMIO": "https://drive.google.com/open?id=1hwgS1FLGD8jFupf3vWXETZH8HVtHOrbn, https://drive.google.com/open?id=1IAqWS7FmHJPqoH8Hto1-EF4LBZyJ0pzj, https://drive.google.com/open?id=1ViIwyvFU9GAryOmyy_fFle3TT3nZz_Pt, https://drive.google.com/open?id=1CLY98rh-kU8Jns63_secSD4Dv9DiC0D-, https://drive.google.com/open?id=1BVhk-AEwyJSFJu7fBM415Fr92G4s7C2H", "AFLUENCIA TXT": "ALTA"}, {"FECHA": "2026-04-25", "TIENDA": "MERCADO SANTA ROSA", "DNI": 71834793, "FOTO INGRESO": "https://drive.google.com/open?id=1PZrTwQe6eiJvCM45L6rH-0xOv166eD_-", "FOTO SALIDA": "https://drive.google.com/open?id=1LLuS-L-EZ7VV5lHLl30YbyOi6mjYZwYS", "AFLUENCIA": 4, "EDAD SHOPPER": "Entre 36 y 50 años", "FACTOR DIFICULTAD VENTAS": "Cliente (No interesado, prisa, etc.)", "CANTIDAD VENDIDA": 23, "PERSONAS ABORDADAS": 60, "PARTICIPANTES EN RULETA": 23, "CANJE TAPERS": 23, "CANJE PANES": 0, "FOTO CON PREMIO": "https://drive.google.com/open?id=1DOnrbESbHsxD64SXKiNlKpuOz8860Sn7, https://drive.google.com/open?id=1M42bBdioQfqMu9wUM2pHi7-y3ReZY-Ka, https://drive.google.com/open?id=1ZB38Lttixbk-8GRqWbBda6N-eJntQ2c6, https://drive.google.com/open?id=12vFHSW0ulcCnzrpLKXKk6WEbqMhyMK_K, https://drive.google.com/open?id=1vrBNTFEj9cz4e-e_8DV5mHEKlWyrJMlw, https://drive.google.com/open?id=1Y16tL_VzKzb6gnNlpqYKn8rTqfAabl7M, https://drive.google.com/open?id=1guZfqQ3VDDYO4RihnlXHWPzULMlBAl7n, https://drive.google.com/open?id=1qz2zmmBl8tFDl4TQSlro3wwo-va1ndyB, https://drive.google.com/open?id=1NarY_s-WQNIf8_RqUqlWbTj_N24mxgFS, https://drive.google.com/open?id=1WvhRijxexZUUPagOJdTZ7a6g933m18qp", "AFLUENCIA TXT": "ALTA"}];
+
+let fS=[],fR=[];
+let srchS='',srchR='';
+let sortS={col:'',dir:1},sortR={col:'',dir:1};
+let pgS=1,pgR=1;
+const PG=15;
+let charts={};
+
+window.onload=function(){buildFilters();applyFilters();};
+
+function buildFilters(){
+  const dates=[...new Set([...RAW_S,...RAW_R].map(r=>r['FECHA']).filter(Boolean))].sort();
+  const fFecha=document.getElementById('fFecha');
+  dates.forEach(d=>{
+    const [y,m,day]=d.split('-');
+    const o=document.createElement('option');
+    o.value=d; o.textContent=`${day}/${m}/${y}`; fFecha.appendChild(o);
+  });
+  const stores=[...new Set([...RAW_S,...RAW_R].map(r=>r['TIENDA']).filter(Boolean))].sort();
+  const fT=document.getElementById('fTienda');
+  stores.forEach(s=>{
+    const o=document.createElement('option');
+    o.value=s; o.textContent=s.charAt(0)+s.slice(1).toLowerCase(); fT.appendChild(o);
+  });
+}
+
+function resetFilters(){
+  ['fFecha','fTienda','fAfluencia'].forEach(id=>document.getElementById(id).value='');
+  applyFilters();
+}
+
+function applyFilters(){
+  const fecha=document.getElementById('fFecha').value;
+  const tienda=document.getElementById('fTienda').value;
+  const afl=document.getElementById('fAfluencia').value;
+  const fn=rows=>rows.filter(r=>{
+    if(fecha && r['FECHA']!==fecha) return false;
+    if(tienda && r['TIENDA']!==tienda) return false;
+    if(afl && (r['AFLUENCIA TXT']||'').toUpperCase()!==afl) return false;
+    return true;
+  });
+  fS=fn(RAW_S); fR=fn(RAW_R);
+  pgS=1; pgR=1;
+  document.getElementById('countS').textContent=fS.length;
+  document.getElementById('countR').textContent=fR.length;
+  renderAll();
+}
+
+function switchTab(t){
+  ['sampling','ruleta'].forEach(x=>{
+    document.getElementById('tab-'+x).classList.toggle('active',x===t);
+    document.getElementById('panel-'+x).classList.toggle('active',x===t);
+  });
+}
+
+function renderAll(){renderKPIs();renderCharts();renderTables();renderSummaryCards();}
+
+function n(v){const x=parseFloat(v);return isNaN(x)?0:x;}
+
+function renderKPIs(){
+  const s=fS;
+  const tS=s.reduce((a,x)=>a+n(x['SAMPLING']),0);
+  const aS=s.reduce((a,x)=>a+n(x['PERSONAS ABORDADAS']),0);
+  const cvS=aS?((tS/aS)*100).toFixed(1):0;
+  const tienS=[...new Set(s.map(x=>x['TIENDA']))].length;
+  const diasS=[...new Set(s.map(x=>x['FECHA']))].length;
+  const avgS=s.length?(tS/s.length).toFixed(0):0;
+  document.getElementById('kpiS').innerHTML=[
+    kp('c1','🧪','Total Sampling',tS.toLocaleString(),s.length+' registros'),
+    kp('c2','👥','Pers. Abordadas',aS.toLocaleString(),`Prom: ${(aS/Math.max(s.length,1)).toFixed(0)}/reg`),
+    kp('c3','📈','Tasa Conversión',cvS+'%','Sampling / Abordadas'),
+    kp('c4','🏪','Tiendas Activas',tienS,'en el período'),
+    kp('c5','📅','Días Activos',diasS,'con registros'),
+    kp('c6','⚡','Sampling Prom.',avgS,'por registro'),
+  ].join('');
+
+  const r=fR;
+  const tV=r.reduce((a,x)=>a+n(x['CANTIDAD VENDIDA']),0);
+  const tP=r.reduce((a,x)=>a+n(x['PARTICIPANTES EN RULETA']),0);
+  const tT=r.reduce((a,x)=>a+n(x['CANJE TAPERS']),0);
+  const tPn=r.reduce((a,x)=>a+n(x['CANJE PANES']),0);
+  const tienR=[...new Set(r.map(x=>x['TIENDA']))].length;
+  const diasR=[...new Set(r.map(x=>x['FECHA']))].length;
+  document.getElementById('kpiR').innerHTML=[
+    kp('c1','🎯','Cant. Vendida',tV.toLocaleString(),r.length+' registros'),
+    kp('c2','🎡','Participantes',tP.toLocaleString(),'en ruleta'),
+    kp('c3','🥡','Canje Tapers',tT.toLocaleString(),'canjeados'),
+    kp('c4','🍞','Canje Panes',tPn.toLocaleString(),'canjeados'),
+    kp('c5','🏪','Tiendas Activas',tienR,'en el período'),
+    kp('c6','📅','Días Activos',diasR,'con registros'),
+  ].join('');
+}
+
+function kp(cls,ico,lbl,val,sub){
+  return `<div class="kpi ${cls}"><span class="kpi-ico">${ico}</span><div class="kpi-lbl">${lbl}</div><div class="kpi-val">${val}</div><div class="kpi-sub">${sub}</div></div>`;
+}
+
+const PALETA=['#4c8bf5','#9b5de5','#00c9a7','#f8c043','#ff6b6b','#67e8f9'];
+
+function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+
+function copts(stacked){
+  return{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{display:stacked,labels:{color:'#7d8aaa',font:{size:11},boxWidth:10}},
+      tooltip:{backgroundColor:'#10141f',titleColor:'#dde4f5',bodyColor:'#7d8aaa',borderColor:'#1f2a45',borderWidth:1}
+    },
+    scales:{
+      x:{stacked,grid:{color:'rgba(31,42,69,0.4)'},ticks:{color:'#404d6a',font:{size:10},maxRotation:30}},
+      y:{stacked,beginAtZero:true,grid:{color:'rgba(31,42,69,0.4)'},ticks:{color:'#404d6a',font:{size:10}}}
+    }
+  };
+}
+
+function renderCharts(){
+  dc('cST');
+  const stMap={};
+  fS.forEach(r=>{const t=r['TIENDA'];stMap[t]=(stMap[t]||0)+n(r['SAMPLING']);});
+  charts['cST']=new Chart(document.getElementById('cST').getContext('2d'),{
+    type:'bar',
+    data:{labels:Object.keys(stMap).map(k=>k.charAt(0)+k.slice(1).toLowerCase()),datasets:[{label:'Sampling',data:Object.values(stMap),backgroundColor:PALETA,borderRadius:5,borderSkipped:false}]},
+    options:copts(false)
+  });
+
+  dc('cSF');
+  const sfMap={};
+  fS.forEach(r=>{const f=fmtDate(r['FECHA']);sfMap[f]=(sfMap[f]||0)+n(r['AFLUENCIA']);});
+  charts['cSF']=new Chart(document.getElementById('cSF').getContext('2d'),{
+    type:'line',
+    data:{labels:Object.keys(sfMap),datasets:[{label:'Afluencia',data:Object.values(sfMap),borderColor:'#4c8bf5',backgroundColor:'rgba(76,139,245,0.12)',fill:true,tension:0.4,pointBackgroundColor:'#4c8bf5',pointRadius:5}]},
+    options:copts(false)
+  });
+
+  dc('cRT');
+  const rtMap={};
+  fR.forEach(r=>{const t=r['TIENDA'];rtMap[t]=(rtMap[t]||0)+n(r['CANTIDAD VENDIDA']);});
+  charts['cRT']=new Chart(document.getElementById('cRT').getContext('2d'),{
+    type:'bar',
+    data:{labels:Object.keys(rtMap).map(k=>k.charAt(0)+k.slice(1).toLowerCase()),datasets:[{label:'Vendido',data:Object.values(rtMap),backgroundColor:PALETA.slice(2),borderRadius:5,borderSkipped:false}]},
+    options:copts(false)
+  });
+
+  dc('cRF');
+  const rfP={},rfT={},rfPn={};
+  fR.forEach(r=>{
+    const f=fmtDate(r['FECHA']);
+    rfP[f]=(rfP[f]||0)+n(r['PARTICIPANTES EN RULETA']);
+    rfT[f]=(rfT[f]||0)+n(r['CANJE TAPERS']);
+    rfPn[f]=(rfPn[f]||0)+n(r['CANJE PANES']);
+  });
+  const rDates=Object.keys(rfP);
+  charts['cRF']=new Chart(document.getElementById('cRF').getContext('2d'),{
+    type:'bar',
+    data:{labels:rDates,datasets:[
+      {label:'Participantes',data:rDates.map(f=>rfP[f]||0),backgroundColor:'#9b5de5',borderRadius:4},
+      {label:'Tapers',data:rDates.map(f=>rfT[f]||0),backgroundColor:'#00c9a7',borderRadius:4},
+      {label:'Panes',data:rDates.map(f=>rfPn[f]||0),backgroundColor:'#f8c043',borderRadius:4},
+    ]},
+    options:copts(true)
+  });
+}
+
+function filterTbl(t){
+  if(t==='S'){srchS=document.getElementById('srchS').value.toLowerCase();pgS=1;}
+  else{srchR=document.getElementById('srchR').value.toLowerCase();pgR=1;}
+  renderTables();
+}
+
+function srt(t,col){
+  const s=t==='S'?sortS:sortR;
+  if(s.col===col)s.dir*=-1; else{s.col=col;s.dir=1;}
+  renderTables();
+}
+
+function getRows(t){
+  let rows=t==='S'?fS:fR;
+  const srch=t==='S'?srchS:srchR;
+  const s=t==='S'?sortS:sortR;
+  if(srch) rows=rows.filter(r=>Object.values(r).some(v=>String(v||'').toLowerCase().includes(srch)));
+  if(s.col) rows=[...rows].sort((a,b)=>{
+    const av=a[s.col]||'',bv=b[s.col]||'';
+    const an=parseFloat(av),bn=parseFloat(bv);
+    if(!isNaN(an)&&!isNaN(bn)) return (an-bn)*s.dir;
+    return String(av).localeCompare(String(bv))*s.dir;
+  });
+  return rows;
+}
+
+function renderTables(){renderTbl('S');renderTbl('R');}
+
+function renderTbl(t){
+  const rows=getRows(t);
+  const pg=t==='S'?pgS:pgR;
+  const total=rows.length;
+  const totalPg=Math.max(1,Math.ceil(total/PG));
+  const start=(pg-1)*PG;
+  const slice=rows.slice(start,start+PG);
+  const tb=document.getElementById('tb'+t);
+
+  if(!slice.length){
+    tb.innerHTML=`<tr><td colspan="20"><div style="display:flex;flex-direction:column;align-items:center;padding:40px;color:var(--text3);gap:8px;"><span style="font-size:36px;opacity:.3">🔍</span><span>Sin resultados</span></div></td></tr>`;
+  }else if(t==='S'){
+    tb.innerHTML=slice.map(r=>`<tr>
+      <td>${fmtDate(r['FECHA'])}</td>
+      <td>${toTitle(r['TIENDA'])}</td>
+      <td><span class="badge b-${(r['AFLUENCIA TXT']||'').toLowerCase()}">${r['AFLUENCIA TXT']||'—'}</span></td>
+      <td>${r['EDAD SHOPPER']||'—'}</td>
+      <td title="${esc(r['FACTOR DIFICULTAD VENTAS'])}">${trunc(r['FACTOR DIFICULTAD VENTAS'],32)}</td>
+      <td>${n(r['SAMPLING']).toLocaleString()}</td>
+      <td>${n(r['PERSONAS ABORDADAS']).toLocaleString()}</td>
+    </tr>`).join('');
+  }else{
+    tb.innerHTML=slice.map(r=>`<tr>
+      <td>${fmtDate(r['FECHA'])}</td>
+      <td>${toTitle(r['TIENDA'])}</td>
+      <td><span class="badge b-${(r['AFLUENCIA TXT']||'').toLowerCase()}">${r['AFLUENCIA TXT']||'—'}</span></td>
+      <td>${r['EDAD SHOPPER']||'—'}</td>
+      <td title="${esc(r['FACTOR DIFICULTAD VENTAS'])}">${trunc(r['FACTOR DIFICULTAD VENTAS'],32)}</td>
+      <td>${n(r['CANTIDAD VENDIDA']).toLocaleString()}</td>
+      <td>${n(r['PERSONAS ABORDADAS']).toLocaleString()}</td>
+      <td>${n(r['PARTICIPANTES EN RULETA']).toLocaleString()}</td>
+      <td>${n(r['CANJE TAPERS']).toLocaleString()}</td>
+      <td>${n(r['CANJE PANES']).toLocaleString()}</td>
+    </tr>`).join('');
+  }
+
+  document.getElementById('pi'+t).textContent=
+    total?`Mostrando ${Math.min(start+1,total)}–${Math.min(start+PG,total)} de ${total}`:'Sin resultados';
+
+  const pb=document.getElementById('pb'+t);
+  pb.innerHTML='';
+  let sp=Math.max(1,pg-3),ep=Math.min(totalPg,sp+6);
+  if(ep-sp<6) sp=Math.max(1,ep-6);
+  if(pg>1) addPB(pb,'‹',pg-1,t);
+  for(let p=sp;p<=ep;p++) addPB(pb,p,p,t,p===pg);
+  if(pg<totalPg) addPB(pb,'›',pg+1,t);
+}
+
+function addPB(c,lbl,tgt,t,on=false){
+  const b=document.createElement('button');
+  b.className='pb'+(on?' on':'');
+  b.textContent=lbl;
+  b.onclick=()=>{if(t==='S')pgS=tgt;else pgR=tgt;renderTables();};
+  c.appendChild(b);
+}
+
+// ===== SUMMARY CARDS =====
+const STORE_ICONS=['🏪','🛒','🏬','🛍️'];
+const STORE_COLORS=['si-0','si-1','si-2','si-3'];
+
+function renderSummaryCards(){
+  renderSumGrid('S', fS);
+  renderSumGrid('R', fR);
+}
+
+function renderSumGrid(t, rows){
+  const cont = document.getElementById('sum'+t);
+  if(!rows.length){
+    cont.innerHTML=`<div class="no-data"><span style="font-size:36px;opacity:.3">🏪</span><span>Sin datos para los filtros seleccionados</span></div>`;
+    return;
+  }
+
+  // Group by store
+  const storeMap={};
+  rows.forEach(r=>{
+    const store=r['TIENDA'];
+    if(!storeMap[store]) storeMap[store]={
+      name:store, regs:0,
+      sampling:0, abordadas:0,          // sampling
+      vendida:0, participantes:0,        // ruleta
+      tapers:0, panes:0,
+      afluencias:{}, fechas:new Set(), factores:{}
+    };
+    const s=storeMap[store];
+    s.regs++;
+    s.fechas.add(r['FECHA']);
+    // Sampling metrics
+    s.sampling    += n(r['SAMPLING']);
+    s.abordadas   += n(r['PERSONAS ABORDADAS']);
+    // Ruleta metrics
+    s.vendida      += n(r['CANTIDAD VENDIDA']);
+    s.participantes+= n(r['PARTICIPANTES EN RULETA']);
+    s.tapers       += n(r['CANJE TAPERS']);
+    s.panes        += n(r['CANJE PANES']);
+    // Afluencia count
+    const afl=(r['AFLUENCIA TXT']||'').toUpperCase();
+    if(afl) s.afluencias[afl]=(s.afluencias[afl]||0)+1;
+    // Factor dificultad
+    const fac=r['FACTOR DIFICULTAD VENTAS']||'';
+    if(fac) s.factores[fac]=(s.factores[fac]||0)+1;
+  });
+
+  const stores=Object.values(storeMap);
+  // Max for bar scaling
+  const maxVal = t==='S'
+    ? Math.max(...stores.map(s=>s.sampling),1)
+    : Math.max(...stores.map(s=>s.vendida),1);
+
+  cont.innerHTML=stores.map((s,i)=>{
+    const colorIdx=i%4;
+    const pct = t==='S'
+      ? Math.round((s.sampling/maxVal)*100)
+      : Math.round((s.vendida/maxVal)*100);
+    const barMetricVal = t==='S' ? s.sampling : s.vendida;
+    const barMetricLbl = t==='S' ? 'Sampling' : 'Cant. Vendida';
+    // Top factor
+    const topFactor=Object.entries(s.factores).sort((a,b)=>b[1]-a[1])[0];
+
+    // Stats to show
+    let statsHtml='';
+    if(t==='S'){
+      const conv=s.abordadas?((s.sampling/s.abordadas)*100).toFixed(1):0;
+      statsHtml=`
+        <div class="sum-stat"><div class="sum-stat-val">${s.sampling.toLocaleString()}</div><div class="sum-stat-lbl">Total Sampling</div></div>
+        <div class="sum-stat"><div class="sum-stat-val">${s.abordadas.toLocaleString()}</div><div class="sum-stat-lbl">Pers. Abordadas</div></div>
+        <div class="sum-stat"><div class="sum-stat-val">${conv}%</div><div class="sum-stat-lbl">Tasa Conversión</div></div>
+        <div class="sum-stat"><div class="sum-stat-val">${s.regs}</div><div class="sum-stat-lbl">Registros</div></div>
+      `;
+    }else{
+      statsHtml=`
+        <div class="sum-stat"><div class="sum-stat-val">${s.vendida.toLocaleString()}</div><div class="sum-stat-lbl">Cant. Vendida</div></div>
+        <div class="sum-stat"><div class="sum-stat-val">${s.participantes.toLocaleString()}</div><div class="sum-stat-lbl">Participantes</div></div>
+        <div class="sum-stat"><div class="sum-stat-val">${s.tapers.toLocaleString()}</div><div class="sum-stat-lbl">Canje Tapers</div></div>
+        <div class="sum-stat"><div class="sum-stat-val">${s.panes.toLocaleString()}</div><div class="sum-stat-lbl">Canje Panes</div></div>
+      `;
+    }
+
+    // Afluencia chips
+    const aflChips=Object.entries(s.afluencias).map(([k,v])=>
+      `<span class="afl-chip ${k.toLowerCase()}">${k} ${v}</span>`
+    ).join('');
+
+    return `<div class="sum-card">
+      <div class="sum-card-head">
+        <div class="sum-store-icon ${STORE_COLORS[colorIdx]}">${STORE_ICONS[colorIdx]}</div>
+        <div>
+          <div class="sum-store-name">${toTitle(s.name)}</div>
+          <div class="sum-store-sub">${s.fechas.size} día${s.fechas.size!==1?'s':''} · ${s.regs} registro${s.regs!==1?'s':''}</div>
+        </div>
+      </div>
+      <div class="sum-body">${statsHtml}</div>
+      <div class="sum-bar-wrap">
+        <div class="sum-bar-lbl"><span>${barMetricLbl}</span><span>${barMetricVal.toLocaleString()} (${pct}%)</span></div>
+        <div class="sum-bar-bg"><div class="sum-bar-fill fill-${colorIdx}" style="width:${pct}%"></div></div>
+      </div>
+      ${aflChips?`<div class="sum-afl">${aflChips}</div>`:''}
+      ${topFactor?`<div style="padding:0 18px 14px;font-size:11px;color:var(--text3);">⚠️ Principal dificultad: <span style="color:var(--text2)">${trunc(topFactor[0],40)}</span></div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ===== HELPERS =====
+function fmtDate(v){
+  if(!v) return '—';
+  const [y,m,d]=(v+'').split('-');
+  return d&&m&&y?`${d}/${m}/${y}`:v;
+}
+function toTitle(s){s=s||'';return s.charAt(0)+s.slice(1).toLowerCase();}
+function trunc(s,n){s=s||'';return s.length>n?s.slice(0,n)+'…':s;}
+function esc(s){return(s||'').replace(/'/g,"&apos;").replace(/"/g,"&quot;");}
+</script>
+</body>
+</html>
